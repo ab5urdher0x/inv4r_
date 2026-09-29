@@ -1,0 +1,72 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+
+# --- Tests (local only — never pushed) ---
+tests/
+.pytest_cache/
+test-results/
+.coverage
+
+# --- Environment / secrets (never commit) ---
+.env
+.env.*
+!.env.example
+users.yaml
+*.pem
+*.key
+secrets/
+cloud_key.json
+
+# --- Runtime state: uploaded configs, assessments, sessions, decisions,
+#     learned mappings. The deployment starts from zero every time; everything
+#     in these directories is recreated (or re-uploaded) at runtime. ---
+configs/*
+!configs/.gitkeep
+out/*
+!out/.gitkeep
+mappings/*
+!mappings/.gitkeep
+*.history.jsonl
+registry-audit.jsonl
+sessions.json
+nodes.json
+fragment_decisions.json
+decisions.json
+assessment.json
+report_*.pdf
+*SITL2-B*.pdf
+
+# --- Node / dashboard ---
+node_modules/
+dashboard/dist/
+dashboard/.vite/
+*.tsbuildinfo
+
+# --- Agent / tool state (never pushed) ---
+.freebuff/
+.agents/
+.claude/
+
+# --- OS / editor junk ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+*.bak
+*.swp

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "inv4r"
+version = "0.1.0"
+description = "INV4R — universal, adapter-driven network configuration compliance auditor"
+requires-python = ">=3.10"
+dependencies = [
+    "PyYAML>=6.0",
+    "fastapi>=0.100",
+    "uvicorn[standard]>=0.23",
+    "python-multipart>=0.0.6",
+    "pydantic>=2.0",
+    "reportlab>=4.0",
+    "pybatfish",
+]
+
+[project.optional-dependencies]
+pdf = ["reportlab>=4.0"]
+dev = [
+    "pytest>=8.0",
+    "httpx>=0.24",
+    "coverage[toml]>=7.0",
+]
+
+[project.scripts]
+inv4r = "inv4r.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["inv4r*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

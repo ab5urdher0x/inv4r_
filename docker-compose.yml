@@ -1,0 +1,39 @@
+services:
+  batfish:
+    image: batfish/allinone:latest
+    container_name: inv4r-batfish
+    ports:
+      - "9996:9996"
+    restart: unless-stopped
+
+  inv4r:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: inv4r-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - INV4R_ENV=production
+      - INV4R_AIR_GAPPED=true
+      - INV4R_AI_MODE=learned
+      - INV4R_BATFISH_HOST=batfish
+      - INV4R_USERS_FILE=/data/users.yaml
+      - INV4R_JWT_SECRET=${INV4R_JWT_SECRET:?Set a unique 32+ character JWT secret before starting}
+      - INV4R_SECRET_KEY=${INV4R_SECRET_KEY:-}
+      - INV4R_BOOTSTRAP_ADMIN_EMAIL=${INV4R_BOOTSTRAP_ADMIN_EMAIL:?Set the first administrator email before starting}
+      - INV4R_BOOTSTRAP_ADMIN_PASSWORD=${INV4R_BOOTSTRAP_ADMIN_PASSWORD:?Set a 12+ character first administrator password before starting}
+    volumes:
+      - inv4r-out:/app/out
+      - inv4r-mappings:/app/mappings
+      - inv4r-configs:/app/configs
+      - inv4r-users:/data
+    depends_on:
+      - batfish
+    restart: unless-stopped
+
+volumes:
+  inv4r-out:
+  inv4r-mappings:
+  inv4r-configs:
+  inv4r-users:

@@ -1,0 +1,16 @@
+.git
+.gitignore
+.dockerignore
+docker-compose.yml
+**/__pycache__
+**/*.pyc
+*.egg-info
+.venv
+.pytest_cache
+.env
+.env.*
+users.yaml
+out
+tests
+dashboard/node_modules
+dashboard/dist
