@@ -1,0 +1,241 @@
+# Universal detection signatures. Add a vendor by editing this file — no code changes.
+# regexes are Python re, applied with IGNORECASE|MULTILINE over the whole text.
+version: 1
+vendors:
+
+  cisco-ios:
+    platform: ios
+    filename_hint: '(ios|catalyst|c9\d{3}|c8\d{3}|2960|3750|4451)'
+    signature_regexes:
+      - '^version\s+\d+\.\d+'
+      - '^service password-encryption'
+      - '^enable secret'
+      - '^router\s+(ospf|eigrp|bgp)\b'
+      - '^spanning-tree mode'
+      - '^ip access-list (standard|extended)'
+    weak_signature_regexes:
+      - '^hostname\s+\S+'
+      - '^interface\s+(\w|-)+\d'
+      - '^line\s+(con|vty|aux)\s'
+      - '^logging host '
+      - '^snmp-server '
+      - '^ntp server '
+    features:
+      vty_lines: '^line\s+vty\s'
+    version_regex: '^version\s+([0-9.]+)'
+    model_regex: '^(?:!|)\s*[Hh]ardware:\s*(.+)$'
+    hostname_regex: '^hostname\s+(\S+)'
+    serial_regex: 'Processor board ID\s+(\S+)'
+
+  unknown-vendorx:
+    platform: vendorx-os7
+    signature_regexes:
+      - '^system\.services\.'
+      - '^system\.management\.'
+      - '^logging\.remote\.'
+      - '^snmp\.community\.'
+    features:
+      dotted_paths: '^[a-z][\w-]*(\.[\w-]+){2,}'
+    version_regex: '(?!x)x'
+
+  cisco-nxos:
+    platform: nxos
+    signature_regexes:
+      - '^feature\b'
+      - '^boot nxos'
+      - '^install feature-set'
+      - '^switchname\s'
+      - '^hostname\s+\S+'
+      - '^interface (ethernet|mgmt0|loopback|vlan)\b'
+    features:
+      nxos_feature: '^feature\s+(bgp|ospf|ssh|tacacs\+?)\b'
+    version_regex: '^(?:!|)\s*[Vv]ersion\s+([0-9.()a-zA-Z]+)'
+    hostname_regex: '^(?:hostname|switchname)\s+(\S+)'
+
+  cisco-asa:
+    platform: asa
+    signature_regexes:
+      - '^ASA Version'
+      - '^interface (GigabitEthernet|TenGigabitEthernet|Management0/0)'
+      - '^(?:backup )?context\b'
+      - '^class-map\b'
+      - '^policy-map\b'
+    features:
+      asa_version: 'ASA Version (\S+)'
+    version_regex: 'ASA Version (\S+)'
+    hostname_regex: '^hostname\s+(\S+)'
+
+  cisco-meraki:
+    platform: meraki
+    negative_regexes:
+      - '^version\s+\d+\.\d+'
+      - '^interface\s+(\w|-)+\d'
+    signature_regexes:
+      - '^name\s+\S+:\s*'      # "name LX103: ..." style
+      - '^vlan \d+'
+      - '^"mac_address"'        # dashboard export markers
+    features:
+      dash_export: '"networkId"'
+    version_regex: '(?:^|\n)!\s*[Ss]oftware:\s*MX\s+(\S+)'
+
+  arista-eos:
+    platform: eos
+    filename_hint: '(eos|arista)'
+    signature_regexes:
+      - '^management api http-commands'
+      - '^management ssh'
+      - '^interface Ethernet\d'
+      - '^aaa root secret'
+      - '^aaa authorization exec default'
+    weak_signature_regexes:
+      - '^hostname\s+\S+'
+      - '^logging host '
+      - '^ip route 0\.0\.0\.0/0 '
+      - '^enable secret sha512'
+    features:
+      vrf: '^vrf definition \S+'
+    version_regex: '(?!x)x'
+    hostname_regex: '^hostname\s+(\S+)'
+
+  juniper-junos:
+    platform: junos
+    filename_hint: '(junos|srx|ex\d{3}|mx\d{3})'
+    signature_regexes:
+      - '^\s*(set|delete|deactivate)\s+(system|interfaces|security|protocols|policy-options)\b'
+      - 'system \{'
+      - 'interfaces \{'
+      - 'security \{'
+      - 'replace:|host-name '
+    features:
+      junos_set_system: '^set system host-name'
+    version_regex: '## Version (\S+)'
+    hostname_regex: '(?:^set system host-name\s+|host-name\s+)([A-Za-z0-9._-]+)'
+
+  paloalto-panos:
+    platform: panos
+    filename_hint: '(pan|palo)'
+    signature_regexes:
+      - '^config (devices|panorama|shared)?'
+      - '^  (network|devices|shared|vsys|deviceconfig|profiles) \{'
+      - '^<config'
+      - '^set deviceconfig system'
+      - '^\s*<entry name='
+    features:
+      pan_version: '<sw-version>([^<]+)</sw-version>'
+    version_regex: '<sw-version>([^<]+)</sw-version>'
+    hostname_regex: '<hostname>([^<]+)</hostname>'
+
+  fortinet-fortigate:
+    platform: fortigate
+    filename_hint: '(forti|fgt)'
+    signature_regexes:
+      - '^config system global'
+      - '^config system interface'
+      - '^config firewall policy'
+      - '^\s*edit "\d+"'
+      - '^config router static'
+      - '^\s*set hostname '
+    features:
+      fgt_version: '#config-version=(?:\S+-)?(\d+\.\d+\.\d+)'
+    version_regex: '#config-version=\S*?(\d+\.\d+\.\d+)'
+    # The FortiGate export header carries the model, e.g.
+    # '#config-version=FGT60F-7.2.5-FW-build1396-...' -> model FGT60F.
+    model_regex: '#config-version=([A-Za-z0-9_]+)(?:-\d+\.\d+\.\d+)?'
+    hostname_regex: '^\s*set hostname\s+"?([^"\s]+)"?'
+
+  sonic:
+    platform: sonic
+    filename_hint: '(sonic|sonic)'
+    signature_regexes:
+      - '"DEVICE_METADATA"'
+      - '"INTERFACE"'
+      - '"PORT"'
+    weak_signature_regexes:
+      # generic nested-JSON shape: weak only, otherwise any package/cloud JSON
+      # export is misdetected as a SONiC switch and yields fabricated facts.
+      - '^\s*"\w+":\s*\{'
+    features:
+      sonic_json: '"DEVICE_METADATA"'
+    version_regex: '"os_version"\s*:\s*"([^"]+)"'
+    hostname_regex: '"hostname"\s*:\s*"([^"]+)"'
+
+  aws-security-group:
+    platform: aws-security-group
+    signature_regexes:
+      - '"GroupId"\s*:'
+      - '"IpPermissions"\s*:'
+      - '"IpProtocol"\s*:'
+      - '"UserIdGroupPairs"'
+    features:
+      sg_id: '"GroupId"\s*:\s*"sg-[0-9a-f]+"'
+    version_regex: '(?!x)x'
+
+  openconfig-yang:
+    platform: openconfig
+    signature_regexes:
+      - '"openconfig'
+      - 'openconfig-interfaces'
+      - 'openconfig-network-instance'
+    features:
+      oc_json: '"openconfig-interfaces'
+    version_regex: '(?!x)x'
+
+  huawei-vrp:
+    platform: vrp
+    signature_regexes:
+      - '^sysname\s+\S+'
+      - '^interface\s+\S+'
+      - '^aaa$'
+      - '^stelnet server enable'
+      - '^user-interface (con|vty)'
+    features:
+      vrp_version: '^[Vv]ersion (\d+\.\d+)'
+    version_regex: '^\s*[Vv]ersion (\d+\.\d+)'
+    hostname_regex: '^sysname\s+(\S+)'
+    negative_regexes:
+      - '^version\s+\d+\.\d+'   # that's IOS style
+
+  mikrotik-routeros:
+    platform: routeros
+    signature_regexes:
+      - '^/interface\b'
+      - '^/system identity'
+      - '^\s*add .*=.*'
+      - '^/ip (address|route|service|firewall)'
+    features:
+      export_marker: '# .*by RouterOS'
+    version_regex: '# \S+ \S+ RouterOS (\d+\.\d+)'
+    hostname_regex: '^/system identity set name=(\S+)'
+
+  aruba-os:
+    platform: arubaos
+    signature_regexes:
+      - '^(hostname|sysname)\s'
+      - '^interface (vlan|loopback)'
+      - '^aaa authentication'
+      - '^crypto pki'
+    features:
+      aruba_version: '^version = (\S+)'
+    version_regex: '^version\s*=\s*(\S+)'
+    hostname_regex: '^(?:hostname|sysname)\s+(\S+)'
+
+  generic-linux-network:
+    platform: linux
+    signature_regexes:
+      - '^nameserver\s'
+      - '^(auto|iface|allow-hotplug)\s'
+      - '^NETWORKING=yes'
+    version_regex: '(?!x)x'
+
+defaults:
+  # Generic Cisco-style flat CLI with vty/enable lines but no explicit version banner:
+  - format: flat_cli
+    vendor: cisco-ios
+    require_regex: '^(enable secret|line vty|service password-encryption)'
+    confidence: 0.5
+    note: IOS-style flat CLI default
+  - format: hierarchical_cli
+    vendor: cisco-ios
+    require_regex: '^(enable secret|service password-encryption|spanning-tree mode)'
+    confidence: 0.5
+    note: IOS-style hierarchical default

@@ -1,0 +1,669 @@
+# Declarative semantic mappings for Cisco IOS / IOS-XE CLI.
+#
+# This file carries ALL vendor syntax knowledge for IOS-style configs.
+# The semantic engine (inv4r/core/semantic.py) is generic; adding vendor
+# support means adding files like this one — never touching the engine,
+# the policy evaluator, or the scoring code.
+#
+# Rule shape:
+#   match:    section kind(s) + statement field + value constraints
+#   emit:     canonical fact, value, status, confidence, scope override
+#   regex:    optional rule-level regex; {N} in templates = capture group N
+# Confidence expresses EXTRACTION CERTAINT, never security quality.
+#
+# CREDENTIAL MODEL: `service password-encryption` only enables reversible
+# type-7 obfuscation for legacy-stored passwords. It says NOTHING about
+# `enable secret 9` / `username ... secret 9` — those are separate
+# credential objects with their own storage mechanisms, classified
+# independently. Unidentifiable (redacted) markers stay "unknown".
+#
+# ACL MODEL: an ACL existing is `acl.present` (per-ACL entity). It only
+# becomes a management control when BOUND to a management surface
+# (vty access-class / http access-class). Bridge-group address lists are
+# L2 filters and never management surfaces.
+
+mappings:
+  # -- management: VTY transport (per-VTY-entity facts) -----------------------
+  - id: vty-transport-ssh
+    match:
+      section: line_vty
+      field: transport_input
+      contains: ssh
+    emit:
+      fact: management.ssh.enabled
+      value: true
+      confidence: 1.0
+
+  - id: vty-transport-telnet
+    match:
+      section: line_vty
+      field: transport_input
+      contains: telnet
+    emit:
+      fact: management.telnet.enabled
+      value: true
+      confidence: 1.0
+
+  - id: vty-transport-all
+    match:
+      section: line_vty
+      field: transport_input
+      contains: all
+    emit:
+      fact: management.telnet.enabled
+      value: true
+      confidence: 1.0
+      notes: "transport input all permits telnet"
+
+  - id: vty-transport-record
+    match:
+      section: [line_vty, line_telnet, line_ssh, line_other]
+      field: transport_input
+    regex: 'transport input\s+(.+)'
+    emit:
+      fact: management.vty.transport
+      value_template: "{0}"
+      confidence: 1.0
+      entity_template: true
+
+  # -- management: per-line/global services ------------------------------------
+  - id: telnet-server-on
+    match:
+      section: global
+      field: telnet_server
+      negated: false
+    emit:
+      fact: management.telnet.enabled
+      value: true
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  - id: telnet-server-off
+    match:
+      section: global
+      field: telnet_server
+      negated: true
+    emit:
+      fact: management.telnet.enabled
+      value: false
+      status: ABSENT
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  - id: ssh-server-on
+    match:
+      section: global
+      field: ssh_server
+      negated: false
+    emit:
+      fact: management.ssh.enabled
+      value: true
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  - id: ssh-version
+    match:
+      section: global
+      field: ssh_version
+    regex: 'ip ssh version\s+(\d+)'
+    emit:
+      fact: management.ssh.version
+      value_template: "{0}"
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  - id: ssh-timeout
+    match:
+      section: global
+      field: ssh_time-out
+    regex: 'ip ssh time-out\s+(\d+)'
+    emit:
+      fact: management.ssh.timeout
+      value_template: "{0}"
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  # -- management: HTTP/HTTPS servers (independent — they coexist) --------------
+  - id: http-server-on
+    match:
+      section: http_server
+      field: http_server
+      negated: false
+    emit:
+      fact: management.http.enabled
+      value: true
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  - id: http-server-off
+    match:
+      section: http_server
+      field: http_server
+      negated: true
+    emit:
+      fact: management.http.enabled
+      value: false
+      status: ABSENT
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  - id: https-server-on
+    match:
+      section: http_server
+      field: secure_server
+      negated: false
+    emit:
+      fact: management.https.enabled
+      value: true
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  - id: https-server-off
+    match:
+      section: http_server
+      field: secure_server
+      negated: true
+    emit:
+      fact: management.https.enabled
+      value: false
+      status: ABSENT
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  - id: http-auth
+    match:
+      section: http_server
+      field: authentication
+    regex: 'ip http authentication\s+\S+\s+(\S+)'
+    emit:
+      fact: management.http.authentication
+      value_template: "{0}"
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  - id: http-acl
+    match:
+      section: http_server
+      field: access_class
+    regex: 'ip http access-class\s+(\S+)'
+    emit:
+      fact: management.http.acl
+      value_template: "{0}"
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  # -- line context: exec-timeout / access-class / login ------------------------
+  - id: line-exec-timeout
+    match:
+      section: [line_vty, line_console, line_aux, line_telnet, line_ssh]
+      field: exec_timeout
+    regex: 'exec-timeout\s+(\d+)(?:\s+(\d+))?'
+    emit:
+      fact: management.session_timeout
+      value_template: "{0}"
+      confidence: 1.0
+
+  - id: vty-access-class
+    match:
+      section: line_vty
+      field: access_class
+    regex: 'access-class\s+(\S+)\s+in'
+    emit:
+      fact: management.vty.acl
+      value_template: "{0}"
+      confidence: 1.0
+
+  - id: vty-access-class-ipv6
+    match:
+      section: line_vty
+      field: ipv6_access_class
+    regex: 'ipv6 access-class\s+(\S+)\s+in'
+    emit:
+      fact: management.vty.acl.ipv6
+      value_template: "{0}"
+      confidence: 1.0
+
+  - id: console-login
+    match:
+      section: line_console
+      field: login
+    emit:
+      fact: management.console.authentication
+      value: "local"
+      confidence: 0.9
+
+  - id: vty-login
+    match:
+      section: line_vty
+      field: login
+    emit:
+      fact: management.vty.authentication
+      value: "local"
+      confidence: 0.9
+
+  # -- AAA ----------------------------------------------------------------------
+  - id: aaa-new-model
+    match:
+      section: aaa
+      field: new_model
+    emit:
+      fact: authentication.aaa.enabled
+      value: true
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  # -- credentials: per-object storage classification ----------------------------
+  - id: cred-enable-secret
+    match:
+      section: credential
+      field: secret
+      regex: 'enable\s+secret\s+(\d)(?:\s|$)'
+    emit:
+      fact: credential.storage_type
+      value_template: "type{0}"
+      confidence: 1.0
+      entity_template: true
+
+  - id: cred-enable-secret-untyped
+    match:
+      section: credential
+      field: secret
+      regex: 'enable\s+secret\s+(?!\d+\s)(\S+)'
+    emit:
+      fact: credential.storage_type
+      value: "unknown"
+      confidence: 0.6
+      notes: "untyped enable secret; storage marker not identifiable"
+      entity_template: true
+
+  - id: cred-user-secret
+    match:
+      section: credential
+      field: secret
+      regex: 'username\s+\S+\s+(?:privilege\s+\d+\s+)?secret\s+(\d)(?:\s|$)'
+    emit:
+      fact: credential.storage_type
+      value_template: "type{0}"
+      confidence: 1.0
+      entity_template: true
+
+  - id: cred-user-secret-untyped
+    match:
+      section: credential
+      field: secret
+      regex: 'username\s+\S+\s+(?:privilege\s+\d+\s+)?secret\s+(?!\d+\s)(\S+)'
+    emit:
+      fact: credential.storage_type
+      value: "unknown"
+      confidence: 0.6
+      notes: "redacted/unidentifiable secret marker"
+      entity_template: true
+
+  - id: cred-service-password-encryption
+    match:
+      section: global
+      field: password_encryption
+    emit:
+      fact: credential.storage_type
+      value: "type7"
+      confidence: 0.9
+      scope: device
+      entity: "service password-encryption"
+      notes: "enables reversible type-7 obfuscation for legacy-stored passwords"
+
+  # protocol-context credentials: typed value lives in the SAME statement
+  - id: cred-protocol-type7
+    match:
+      section: [global, interface, line_vty, snmp, other]
+      field: [password, key, psk, ascii]
+      regex: '\b(?:chap password|tacacs key|radius key|wpa-psk ascii|key)\s+7\s+(\S+)'
+    emit:
+      fact: credential.storage_type
+      value: "type7"
+      confidence: 1.0
+      entity_template: true
+
+  # -- SNMP -----------------------------------------------------------------------
+  - id: snmp-community
+    match:
+      section: snmp
+      field: community
+    emit:
+      fact: snmp.v1.v2c.enabled
+      value: true
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  - id: snmp-community-acl
+    match:
+      section: snmp
+      field: community
+    regex: 'snmp-server community\s+\S+\s+(?:RO|RW)\s+(\S+)'
+    emit:
+      fact: snmp.community.acl
+      value_template: "{0}"
+      confidence: 1.0
+      entity_template: true
+
+  - id: snmp-v3
+    match:
+      section: snmp
+      field: [group, user]
+      regex: 'snmp-server (?:group|user)\s+\S+.*\bv3\b'
+    emit:
+      fact: snmp.v3.enabled
+      value: true
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  # -- logging ---------------------------------------------------------------------
+  - id: logging-host
+    match:
+      section: logging
+      field: host
+    emit:
+      fact: logging.remote.enabled
+      value: true
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  - id: logging-buffered
+    match:
+      section: logging
+      field: buffered
+    emit:
+      fact: logging.local.enabled
+      value: true
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  # one fact per configured server; the entity carries the address so repeated
+  # `logging host` lines survive conflict resolution as separate evidence.
+  # `regex` lives inside `match` so it constrains which statements apply.
+  - id: logging-host-ip
+    match:
+      section: logging
+      field: host
+      regex: 'logging host\s+(\S+)'
+    emit:
+      fact: logging.remote.servers
+      value_template: "{0}"
+      entity_template: "{0}"
+      confidence: 1.0
+      scope: device
+
+  # -- NTP -----------------------------------------------------------------------
+  - id: ntp-server
+    match:
+      section: global
+      field: ntp
+      regex: '^ntp\s+server\s+(\S+)'
+    emit:
+      fact: ntp.servers
+      value_template: "{0}"
+      entity_template: "{0}"
+      confidence: 1.0
+      scope: device
+
+  # -- SNMP version / community restriction (per-principal evidence) -------------
+  - id: snmp-version-v3
+    match:
+      section: snmp
+      field: [group, user]
+      regex: 'snmp-server (?:group|user)\s+(\S+).*\bv3\b'
+    emit:
+      fact: snmp.version
+      value: "v3"
+      entity_template: "{0}"
+      confidence: 1.0
+      scope: snmp
+
+  - id: snmp-version-v1v2c
+    match:
+      section: snmp
+      field: community
+      regex: 'snmp-server community\s+(\S+)'
+    emit:
+      fact: snmp.version
+      value: "v2c"
+      entity_template: "{0}"
+      confidence: 0.9
+      scope: snmp
+      notes: "community syntax is v1/v2c; the exact version is negotiated per request"
+
+  - id: snmp-community-restricted
+    match:
+      section: snmp
+      field: community
+      regex: 'snmp-server community\s+(\S+)\s+(?:RO|RW)\s+(\S+)'
+    emit:
+      fact: snmp.communities_restricted
+      value: true
+      entity_template: "{0}"
+      confidence: 1.0
+      scope: snmp
+
+  - id: snmp-community-unrestricted
+    match:
+      section: snmp
+      field: community
+      regex: 'snmp-server community\s+(\S+)\s+(?:RO|RW)\s*$'
+    emit:
+      fact: snmp.communities_restricted
+      value: false
+      status: ABSENT
+      entity_template: "{0}"
+      confidence: 1.0
+      scope: snmp
+      notes: "community has no source ACL bound to it"
+
+  # -- ACL bindings to surfaces (management vs other) -------------------------------
+  - id: acl-bind-vty
+    match:
+      section: line_vty
+      field: access_class
+    regex: 'access-class\s+(\S+)\s+in'
+    emit:
+      fact: acl.binding
+      value_template: "vty:{0}:in"
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  - id: acl-bind-vty-ipv6
+    match:
+      section: line_vty
+      field: ipv6_access_class
+    regex: 'ipv6 access-class\s+(\S+)\s+in'
+    emit:
+      fact: acl.binding
+      value_template: "vty6:{0}:in"
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  - id: acl-bind-http
+    match:
+      section: http_server
+      field: access_class
+    regex: 'ip http access-class\s+(\S+)'
+    emit:
+      fact: acl.binding
+      value_template: "http:{0}:in"
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  - id: acl-bind-interface
+    match:
+      section: interface
+      field: access_group
+    regex: 'ip access-group\s+(\S+)\s+(in|out)'
+    emit:
+      fact: acl.binding
+      value_template: "interface:{0}:{1}"
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  # bridge-group address lists are L2 filters, NOT management surfaces
+  - id: acl-bind-bridge
+    match:
+      section: interface
+      field: [bridge-group, input-address-list]
+      regex: 'bridge-group\s+\d+\s+(?:input|output)-address-list\s+(\S+)'
+    emit:
+      fact: acl.binding
+      value_template: "bridge:{0}:l2filter"
+      confidence: 1.0
+      scope: device
+      entity: null
+
+  # logging synchronous inside interface sections is a statement, not a section
+  - id: iface-logging-sync
+    match:
+      section: interface
+      field: synchronous
+    emit:
+      fact: vendor_extension
+      value: "logging synchronous (interface)"
+      status: UNKNOWN
+      confidence: 0.1
+
+  # -- routes / interfaces (compat + resource facts) ---------------------------------
+  - id: route-present
+    match:
+      section: global
+      field: route
+      regex: 'ip route\s+\S+\s+\S+\s+\S+'
+    emit:
+      fact: network.route.present
+      value: true
+      confidence: 1.0
+      scope: device
+      entity: null
+
+aggregations:
+  # telnet/ssh are enabled if ANY vty/global entity permits them (declarative
+  # ANY); the derived fact is emitted at scope 'device' so the scope filter
+  # below never re-consumes it. Absence yields the explicit ABSENT default.
+  - when_any:
+      fact: management.telnet.enabled
+      scope: [line_vty, global]
+      status: [PRESENT]
+    emit:
+      fact: management.telnet.enabled
+      scope: device
+      value: true
+      notes: "at least one active management surface permits telnet"
+    default:
+      value: false
+      status: ABSENT
+      notes: "no configured management surface permits telnet"
+
+  - when_any:
+      fact: management.ssh.enabled
+      scope: [line_vty, global]
+      status: [PRESENT]
+    emit:
+      fact: management.ssh.enabled
+      scope: device
+      value: true
+      notes: "at least one active management surface permits ssh"
+    default:
+      value: false
+      status: ABSENT
+      notes: "no configured management surface permits ssh"
+
+  # session timeout: minimum across line entities (numeric reduce)
+  - when_any:
+      fact: management.session_timeout
+      scope: [line_vty]
+    reduce: min
+    emit:
+      fact: management.session_timeout
+      confidence: 1.0
+      notes: "minimum exec-timeout across vty lines"
+    default:
+      status: UNKNOWN
+      value: null
+      notes: "no exec-timeout configured on vty lines"
+
+  # a management ACL is applied if any management surface binds one
+  - when_any:
+      fact: acl.binding
+      equals_prefix: "vty:"
+    emit:
+      fact: management.acl.applied
+      value: true
+      notes: "access-class bound on vty"
+    default:
+      value: false
+      status: ABSENT
+      notes: "no ACL bound to any management surface"
+
+  - when_any:
+      fact: acl.binding
+      equals_prefix: "http:"
+    emit:
+      fact: management.acl.applied
+      value: true
+      notes: "access-class bound on http server"
+
+  # terminal behavior of the management-bound ACLs specifically (generic
+  # bound_surface join — no vendor logic in the engine)
+  - when_any:
+      fact: acl.terminal_action
+      equals: explicit_deny
+      bound_surface: [vty, vty6, http]
+    emit:
+      fact: management.acl.terminal_action
+      value: "explicit_deny"
+      notes: "management-bound ACL terminates with explicit deny"
+    default:
+      value: null
+      status: UNKNOWN
+      notes: "management-bound ACL has no explicit terminal deny (implicit deny or no ACL)"
+
+  # credential aggregates (only if part of the canonical schema)
+  - when_any:
+      fact: credential.storage_type
+      equals: type9
+    emit:
+      fact: credential.type9.present
+      value: true
+      notes: "type-9 (scrypt) credential observed"
+
+  - when_any:
+      fact: credential.storage_type
+      equals: type7
+    emit:
+      fact: credential.reversible.present
+      value: true
+      notes: "reversible (type-7) encoding observed"
+
+  - when_any:
+      fact: credential.storage_type
+      equals: plaintext
+    emit:
+      fact: credential.plaintext.present
+      value: true
+      notes: "plaintext credential observed"
+
+acl_semantics: true
