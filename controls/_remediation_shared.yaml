@@ -1,0 +1,68 @@
+# Shared per-fact remediation table (YAML include, not a loaded profile —
+# the leading underscore keeps it out of ControlEngine's *.yaml glob).
+#
+# Placeholders such as <iface>, <syslog-ip>, <community-id> and
+# <allowed-services> are resolved by inv4r.reporting.assessment at render
+# time from the device's own facts/evidence; anything that cannot be derived
+# is printed as a visible <UPPERCASE_HINT> plus a one-line "replace with"
+# note. Commands are rendered in a monospace block, never as markup-parsed
+# prose, so angle-bracket placeholders are never dropped.
+#
+# NIST/STIG/ISO controls evaluate the same canonical facts as the CIS
+# baseline, so vendor-specific CLI remediation is defined once here and
+# pasted into each framework pack's profile-level `remediation_by_fact:`
+# when a control has no control-level remediation map. Control-level
+# `remediation:` blocks always win when present.
+
+remediation_by_fact:
+  management.telnet.enabled:
+    cisco-ios: ["configure terminal", "line vty 0 15", "transport input ssh", "end", "write memory"]
+    juniper-junos: ["delete system services telnet", "commit"]
+    # FortiOS 7.2 CLI: config system interface / edit <iface> /
+    # set allowaccess <services>. 'set allowaccess <allowed-services>' is
+    # rebuilt from the interface's CURRENT service list minus telnet, so it
+    # never silently drops the other services. Reference: Fortinet Community
+    # technical tip 92241, "Disable administrative access to the external
+    # interface" (config system interface / set allowaccess ...).
+    fortinet-fortigate: ["config system interface", "edit <iface>", "set allowaccess <allowed-services>", "next", "end"]
+    paloalto-panos: ["set deviceconfig system services telnet permitted-ip <none>"]
+    arista-eos: ["configure", "management telnet", "shutdown", "end", "write memory"]
+  management.ssh.version:
+    cisco-ios: ["configure terminal", "ip ssh version 2", "end", "write memory"]
+    juniper-junos: ["set system services ssh protocol-version v2", "commit"]
+    fortinet-fortigate: ["config system global", "set strong-crypto enable", "end"]
+    arista-eos: ["configure", "management ssh", "protocol v2", "end", "write memory"]
+  management.acl.present:
+    cisco-ios: ["configure terminal", "ip access-list standard MGMT-ACL", "permit <mgmt-net> <wildcard>", "line vty 0 15", "access-class MGMT-ACL in", "end", "write memory"]
+    juniper-junos: ["set policy-options prefix-list MGMT <mgmt-net>", "commit"]
+    paloalto-panos: ["set deviceconfig system permitted-ip <mgmt-net>"]
+  logging.remote.enabled:
+    cisco-ios: ["configure terminal", "logging host <syslog-ip>", "logging trap informational", "end", "write memory"]
+    juniper-junos: ["set system syslog host <syslog-ip> any info", "commit"]
+    fortinet-fortigate: ["config log syslogd setting", "set status enable", "set server <syslog-ip>", "end"]
+    paloalto-panos: ["set shared log-settings syslog <profile> server <syslog-ip>"]
+    arista-eos: ["configure", "logging host <syslog-ip>", "end", "write memory"]
+  logging.local.enabled:
+    cisco-ios: ["configure terminal", "logging buffered 16384 informational", "end", "write memory"]
+    arista-eos: ["configure", "logging buffered 8192 warnings", "end", "write memory"]
+  management.session_timeout:
+    cisco-ios: ["configure terminal", "line vty 0 15", "exec-timeout 10 0", "end", "write memory"]
+    juniper-junos: ["set system login idle-timeout 10", "commit"]
+    fortinet-fortigate: ["config system global", "set admintimeout 10", "end"]
+    arista-eos: ["configure", "management ssh", "idle-timeout 10", "end"]
+  authentication.password.hashing:
+    cisco-ios: ["configure terminal", "enable algorithm-type scrypt secret <new-secret>", "end", "write memory"]
+    juniper-junos: ["set system root-authentication plain-text-password", "commit"]
+    arista-eos: ["configure", "enable secret sha512 <new-secret>", "end", "write memory"]
+  snmp.v1.v2c.enabled:
+    cisco-ios: ["configure terminal", "no snmp-server community <community>", "end", "write memory"]
+    # FortiOS 7.2 CLI: config system snmp community / delete <entry-id>.
+    # The entry id comes from the detected community (never hard-coded).
+    # Reference: FortiOS 7.2 CLI Reference, "config system snmp community".
+    # Moving from v1/v2c to v3 is a SEPARATE step (config system snmp user).
+    fortinet-fortigate: ["config system snmp community", "delete <community-id>", "end", "# SNMPv3 replacement is a separate step: config system snmp user / set auth-proto / set priv-proto"]
+    sonic: ["sonic-db-cli CONFIG_DB 'hdel SNMP|Community readonly-comm'"]
+  authentication.aaa.enabled:
+    cisco-ios: ["configure terminal", "aaa new-model", "aaa authentication login default TACACS+ local", "end", "write memory"]
+    juniper-junos: ["set system authentication-order tacplus", "commit"]
+    fortinet-fortigate: ["config system admin", "edit <admin>", "set accprofile \"super_admin\"", "next", "end"]

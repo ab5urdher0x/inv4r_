@@ -1,0 +1,29 @@
+# INV4R operator configuration.
+# Everything defaults to air-gap safe. Change only what you understand.
+
+ai:
+  # AI proposer lane — one of:
+  #   rules      deterministic keyword table only (no learning, no network)
+  #   learned    TF-IDF k-NN model trained on YOUR approved mappings (default,
+  #              air-gap safe, fully offline)
+  #   local_llm  learned + local LLM via Ollama/OpenAI-compatible server
+  #              (air-gap safe only when the endpoint is loopback)
+  #   cloud_llm  learned + hosted API — REFUSED unless air_gapped is false
+  #              AND an API key is present; config data leaves the machine
+  #   auto       learned if air-gapped, else cloud when a key exists
+  mode: learned
+
+  # Hard air-gap switch. When true, no code path may perform a network call.
+  air_gapped: true
+
+  # Proposals below this confidence return None -> human training workflow.
+  min_confidence: 0.45
+
+  local_llm:
+    model: llama3.2
+    base_url: http://localhost:11434   # Ollama default; must be loopback under air gap
+
+  cloud_llm:
+    model: gpt-4o-mini
+    base_url: https://api.openai.com
+    api_key_env: INV4R_LLM_API_KEY     # key is read from the environment, never stored

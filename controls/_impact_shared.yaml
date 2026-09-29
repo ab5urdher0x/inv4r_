@@ -1,0 +1,78 @@
+# Vendor-agnostic impact catalog (YAML include, not a loaded profile — the
+# leading underscore keeps it out of ControlEngine's *.yaml profile glob).
+#
+# Maps a canonical security fact to one plain-language sentence explaining why
+# the control matters. ControlEngine attaches this to each ControlResult as
+# `reason`, so the Evidence & Remediation view always has a human explanation
+# even when a control carries no explicit `rationale`.
+#
+# This file NEVER contains commands. Executable/vendor-specific configuration
+# lives only in the control `remediation:` map or the profile
+# `remediation_by_fact:` table — the remediation narrative is composed from
+# deterministic metadata and validated policy data, never generated.
+
+impacts:
+  management.telnet.enabled: >-
+    Telnet transmits credentials and session data in clear text, so any
+    observer on the management path can capture administrative access.
+  management.ssh.enabled: >-
+    Administrators need an encrypted management channel; without SSH the only
+    management options are insecure or unavailable.
+  management.ssh.version: >-
+    SSHv1 has known cryptographic weaknesses that allow session decryption and
+    man-in-the-middle attacks; only SSHv2 is considered safe.
+  management.http.enabled: >-
+    Plain HTTP exposes the management interface to credential sniffing and
+    session hijacking.
+  management.https.enabled: >-
+    Encrypted management access should be available where remote administration
+    is permitted.
+  management.session_timeout: >-
+    Idle administrative sessions that never expire can be hijacked if a
+    workstation is left unattended.
+  management.acl.present: >-
+    Without a management-plane ACL, any host that can reach the device may
+    attempt administrative access.
+  management.acl.applied: >-
+    A management ACL only protects the device when it is actually attached to a
+    management surface such as the VTY lines.
+  management.acl.terminal_action: >-
+    An ACL without an explicit terminal deny can fall through to permissive
+    behaviour that is not auditable.
+  authentication.aaa.enabled: >-
+    Centralised AAA gives per-administrator accountability and removes shared
+    local credentials.
+  authentication.password.hashing: >-
+    Weak or reversible password storage lets an attacker who reads the
+    configuration recover administrative credentials.
+  credential.storage_type: >-
+    Credentials stored with a weak or reversible algorithm can be recovered from
+    a configuration backup.
+  credential.reversible.present: >-
+    Reversible credential encoding (for example Cisco type-7) can be trivially
+    decoded, exposing the original password.
+  credential.plaintext.present: >-
+    Plaintext credentials in a configuration are immediately usable by anyone
+    with read access to the file.
+  credential.type9.present: >-
+    Strong one-way password hashing prevents recovery of credentials from a
+    configuration backup.
+  snmp.v1.v2c.enabled: >-
+    SNMP v1/v2c community strings are sent in clear text and often grant broad
+    read access to device state.
+  snmp.v3.enabled: >-
+    SNMPv3 supports authentication and privacy, which SNMP v1/v2c cannot provide.
+  logging.remote.enabled: >-
+    Without remote logging, security events are lost when the device is
+    compromised or reloaded, defeating after-the-fact investigation.
+  logging.local.enabled: >-
+    A local log buffer preserves recent events even when the remote collector is
+    unreachable.
+  network.route.present: >-
+    Management and monitoring reachability depend on a correctly configured
+    route.
+  network.interface.present: >-
+    Interfaces that are not explicitly accounted for may be left in an
+    unintended state.
+  acl.present: >-
+    Traffic-filtering rules are required to bound what the device will forward.

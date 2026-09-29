@@ -1,0 +1,54 @@
+# Declarative vendor profile for a tier-2 built-in parser platform.
+profile_id: cisco-ios
+vendor: cisco-ios
+platform: ios
+
+version_range:
+  min: "12.0"
+  max: "17.x"
+
+input_formats:
+  - hierarchical_cli
+  - flat_cli
+
+structural_parser:
+  type: generic_hierarchical_cli
+  grammar: null
+
+schemas:
+  - ietf-interfaces.yang
+  - ietf-system.yang
+
+mappings: []             # built-in parser covers facts; no runtime pack needed
+
+capabilities:
+  - interfaces
+  - routes
+  - acls
+  - management_services
+  - snmp
+  - ntp
+  - syslog
+
+security_fact_coverage:
+  - management.ssh.enabled
+  - management.ssh.version
+  - management.telnet.enabled
+  - management.http.enabled
+  - management.https.enabled
+  - management.session_timeout
+  - management.acl.present
+  - authentication.aaa.enabled
+  - authentication.password.hashing
+  - logging.remote.enabled
+  - logging.local.enabled
+  - snmp.v1.v2c.enabled
+  - snmp.v3.enabled
+  - network.route.present
+  - network.interface.present
+  - acl.present
+  - acl.default_action
+
+limitations:
+  - cisco_avp_pairs_not_parsed
+  - flexvpn_dmvpn_not_parsed

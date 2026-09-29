@@ -1,0 +1,211 @@
+profile_id: nist-800-53-network
+title: NIST SP 800-53 (AC/AU/IA/SC families) — network device subset
+framework: NIST
+version: '1.0'
+controls:
+- id: NIST-AC-2
+  title: Account management — AAA enabled
+  severity: high
+  fact: authentication.aaa.enabled
+  expect:
+    status: PRESENT
+    value: true
+- id: NIST-AC-3
+  title: Access enforcement — management ACL present
+  severity: high
+  fact: management.acl.present
+  expect:
+    status: PRESENT
+    value: true
+- id: NIST-AC-17
+  title: Remote access — telnet disabled
+  severity: critical
+  fact: management.telnet.enabled
+  expect:
+    status: ABSENT
+- id: NIST-AU-2
+  title: Audit events — remote logging configured
+  severity: high
+  fact: logging.remote.enabled
+  expect:
+    status: PRESENT
+    value: true
+- id: NIST-AU-9
+  title: Protection of audit information — local buffer enabled
+  severity: low
+  fact: logging.local.enabled
+  expect:
+    status: PRESENT
+    value: true
+- id: NIST-IA-5
+  title: Authenticator management — strong password hashing
+  severity: critical
+  fact: authentication.password.hashing
+  expect:
+    status: PRESENT
+    operator: in
+    value:
+    - scrypt
+    - sha512
+    - sha256
+- id: NIST-SC-10
+  title: Session termination — idle timeout configured
+  severity: medium
+  fact: management.session_timeout
+  expect:
+    status: PRESENT
+    operator: <=
+    value: 10
+remediation_by_fact:
+  management.telnet.enabled:
+    cisco-ios:
+    - configure terminal
+    - line vty 0 15
+    - transport input ssh
+    - end
+    - write memory
+    juniper-junos:
+    - delete system services telnet
+    - commit
+    fortinet-fortigate:
+    - config system interface
+    - edit <iface>
+    - set allowaccess ping https ssh
+    - next
+    - end
+    paloalto-panos:
+    - set deviceconfig system services telnet permitted-ip <none>
+    arista-eos:
+    - configure
+    - management telnet
+    - shutdown
+    - end
+    - write memory
+  management.ssh.version:
+    cisco-ios:
+    - configure terminal
+    - ip ssh version 2
+    - end
+    - write memory
+    juniper-junos:
+    - set system services ssh protocol-version v2
+    - commit
+    fortinet-fortigate:
+    - config system global
+    - set strong-crypto enable
+    - end
+    arista-eos:
+    - configure
+    - management ssh
+    - protocol v2
+    - end
+    - write memory
+  management.acl.present:
+    cisco-ios:
+    - configure terminal
+    - ip access-list standard MGMT-ACL
+    - permit <mgmt-net> <wildcard>
+    - line vty 0 15
+    - access-class MGMT-ACL in
+    - end
+    - write memory
+    juniper-junos:
+    - set policy-options prefix-list MGMT <mgmt-net>
+    - commit
+    paloalto-panos:
+    - set deviceconfig system permitted-ip <mgmt-net>
+  logging.remote.enabled:
+    cisco-ios:
+    - configure terminal
+    - logging host <syslog-ip>
+    - logging trap informational
+    - end
+    - write memory
+    juniper-junos:
+    - set system syslog host <syslog-ip> any info
+    - commit
+    fortinet-fortigate:
+    - config log syslogd setting
+    - set status enable
+    - set server <syslog-ip>
+    - end
+    paloalto-panos:
+    - set shared log-settings syslog <profile> server <syslog-ip>
+    arista-eos:
+    - configure
+    - logging host <syslog-ip>
+    - end
+    - write memory
+  logging.local.enabled:
+    cisco-ios:
+    - configure terminal
+    - logging buffered 16384 informational
+    - end
+    - write memory
+    arista-eos:
+    - configure
+    - logging buffered 8192 warnings
+    - end
+    - write memory
+  management.session_timeout:
+    cisco-ios:
+    - configure terminal
+    - line vty 0 15
+    - exec-timeout 10 0
+    - end
+    - write memory
+    juniper-junos:
+    - set system login idle-timeout 10
+    - commit
+    fortinet-fortigate:
+    - config system global
+    - set admintimeout 10
+    - end
+    arista-eos:
+    - configure
+    - management ssh
+    - idle-timeout 10
+    - end
+  authentication.password.hashing:
+    cisco-ios:
+    - configure terminal
+    - enable algorithm-type scrypt secret <new-secret>
+    - end
+    - write memory
+    juniper-junos:
+    - set system root-authentication plain-text-password
+    - commit
+    arista-eos:
+    - configure
+    - enable secret sha512 <new-secret>
+    - end
+    - write memory
+  snmp.v1.v2c.enabled:
+    cisco-ios:
+    - configure terminal
+    - no snmp-server community <community>
+    - end
+    - write memory
+    fortinet-fortigate:
+    - config system snmp community
+    # FortiOS 7.2: delete the detected community entry by id, not a fixed '1'.
+    - delete <community-id>
+    - end
+    sonic:
+    - sonic-db-cli CONFIG_DB 'hdel SNMP|Community readonly-comm'
+  authentication.aaa.enabled:
+    cisco-ios:
+    - configure terminal
+    - aaa new-model
+    - aaa authentication login default TACACS+ local
+    - end
+    - write memory
+    juniper-junos:
+    - set system authentication-order tacplus
+    - commit
+    fortinet-fortigate:
+    - config system admin
+    - edit <admin>
+    - set accprofile "super_admin"
+    - next
+    - end

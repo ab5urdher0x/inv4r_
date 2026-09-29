@@ -1,0 +1,45 @@
+# Declarative vendor profile — onboarding a new vendor WITHOUT code changes.
+# This profile documents VendorX OS7, onboarded via the training loop:
+# its mapping pack (mappings/runtime-unknown-vendorx-demo.yaml) was created
+# from human-approved AI proposals, not from hand-written parser code.
+profile_id: vendorx-os7
+vendor: unknown-vendorx
+platform: vendorx-os7
+
+version_range:
+  min: "7.0"
+  max: "7.x"
+
+input_formats:
+  - dotted_path_cli
+
+structural_parser:
+  type: generic_hierarchical_cli
+  grammar: null          # optional vendor grammar refinement; generic parser suffices here
+
+schemas: []              # vendor-native YANG/API schemas, when available
+
+mappings:
+  - runtime-unknown-vendorx-demo
+
+capabilities:
+  - management_services
+  - routes
+  - snmp
+
+security_fact_coverage:
+  - management.ssh.enabled
+  - management.ssh.version
+  - management.telnet.enabled
+  - management.http.enabled
+  - management.https.enabled
+  - management.session_timeout
+  - authentication.aaa.enabled
+  - logging.remote.enabled
+  - snmp.v1.v2c.enabled
+  - snmp.v3.enabled
+  - network.route.present
+
+limitations:
+  - firewall_policy_semantics_not_mapped
+  - interface_diagnostics_not_parsed
