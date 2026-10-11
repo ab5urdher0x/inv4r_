@@ -1,0 +1,3 @@
+INV4R writes runtime artifacts here (parsed models, facts, audit JSON, PDF
+reports). Everything in this directory is regenerated at runtime and stays out
+of version control; only this `.gitkeep` placeholder is tracked.

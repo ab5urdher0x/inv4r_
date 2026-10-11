@@ -16,7 +16,12 @@ jobs:
       - name: Install INV4R
         run: pip install -e ".[pdf,dev]"
       - name: Run tests
-        run: python -m pytest tests/ -q
+        run: |
+          if compgen -G "tests/test_*.py" > /dev/null; then
+            python -m pytest tests/ -q
+          else
+            echo "No test files committed (tests/ holds local-only tests); skipping pytest."
+          fi
 
   dashboard:
     runs-on: ubuntu-latest

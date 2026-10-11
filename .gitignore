@@ -17,7 +17,8 @@ htmlcov/
 .tox/
 
 # --- Tests (local only — never pushed) ---
-tests/
+tests/*
+!tests/.gitkeep
 .pytest_cache/
 test-results/
 .coverage

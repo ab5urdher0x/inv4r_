@@ -1,0 +1,10 @@
+Place host-provided sample device configuration files here (`.conf`, `.cfg`,
+`.txt`, `.json`, `.xml`, …). Files in this directory are local-only inputs for
+the INV4R pipeline and are intentionally **not committed** to git:
+
+```
+cp /path/to/your/device.cfg configs/
+```
+
+Keep this `.gitkeep` file; it keeps the empty folder tracked in git while all
+actual config payloads stay out of version control.

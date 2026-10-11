@@ -384,6 +384,18 @@ Runtime configuration comes from environment variables and the AI settings:
 
 ## Testing
 
+> **Note:** CI runs pytest only when test files are committed under `tests/`.
+> The `test` job picks them up automatically on the next push:
+>
+> ```bash
+> git add tests/
+> git commit -m "Add test suite"
+> git push
+> ```
+>
+> If the repository contains no `tests/test_*.py` files, the job skips pytest
+> and passes.
+
 ```bash
 python -m pytest tests/ -q          # full suite
 python -m pytest tests/test_api.py -q

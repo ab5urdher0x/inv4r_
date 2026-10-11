@@ -1,0 +1,3 @@
+INV4R writes runtime-approved mapping packs (produced by the training loop)
+here. Everything in this directory is generated at runtime and stays out of
+version control; only this `.gitkeep` placeholder is tracked.
