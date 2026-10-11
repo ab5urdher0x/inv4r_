@@ -19,6 +19,7 @@ adapters, profiles, and mapping packs, never in the engine.
 
 ## Table of contents
 
+- [Demo](#demo)
 - [Why INV4R](#why-inv4r)
 - [Architecture](#architecture)
 - [Pipeline](#pipeline)
@@ -36,6 +37,16 @@ adapters, profiles, and mapping packs, never in the engine.
 - [Project layout](#project-layout)
 - [Documentation](#documentation)
 - [License](#license)
+
+---
+
+## Demo
+
+Watch the full prototype walkthrough on YouTube:
+
+[![INV4R prototype demo](https://img.youtube.com/vi/zgFdIyIwtlw/maxresdefault.jpg)](https://youtu.be/zgFdIyIwtlw "Watch the INV4R prototype demo")
+
+*INV4R — AI-driven multi-vendor network security compliance auditor.*
 
 ---
 
